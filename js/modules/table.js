@@ -95,7 +95,7 @@ const TableModule = (function() {
         var tbody = document.getElementById('tableBody');
 
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum registro encontrado</p></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum registro encontrado</p></div></td></tr>';
             return;
         }
 
@@ -107,6 +107,7 @@ const TableModule = (function() {
                 '<td><span class="loja-badge"><i class="fas fa-store"></i>' + (item.loja || '-') + '</span></td>' +
                 '<td class="col-fornecedor" title="' + escapeHtml(item.fornecedor || '') + '">' + (item.fornecedor || '-') + '</td>' +
                 '<td class="col-produto" title="' + escapeHtml(item.produto || '') + '">' + (item.produto || '-') + '</td>' +
+                '<td class="col-quantidade">' + (item.quantidadeFormatada || '0') + '</td>' +
                 '<td class="col-valor">' + (item.descontoFormatado || 'R$ 0,00') + '</td>' +
                 '<td><button class="btn-view" onclick="TableModule.showDetail(' + item.id + ')"><i class="fas fa-eye"></i> Ver</button></td>' +
             '</tr>';
@@ -162,6 +163,7 @@ const TableModule = (function() {
             '<div class="detail-item"><label>Loja</label><span>' + (item.loja || '-') + '</span></div>' +
             '<div class="detail-item"><label>Fornecedor</label><span>' + (item.fornecedor || '-') + '</span></div>' +
             '<div class="detail-item"><label>Produto</label><span>' + (item.produto || '-') + '</span></div>' +
+            '<div class="detail-item"><label>Quantidade</label><span>' + (item.quantidadeFormatada || '0') + '</span></div>' +
             '<div class="detail-item full-width"><label>Valor do Desconto</label><span class="valor-destaque">' + (item.descontoFormatado || 'R$ 0,00') + '</span></div>' +
         '</div>';
 

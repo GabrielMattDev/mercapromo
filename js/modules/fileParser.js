@@ -14,7 +14,8 @@ const FileParser = (function() {
         loja: ['loja', 'cod_loja', 'codigo_loja', 'store', 'filial', 'unidade'],
         fornecedor: ['fornecedor', 'forn', 'supplier', 'nome_fornecedor', 'razao_social'],
         produto: ['produto', 'descricao', 'descricao_produto', 'item', 'mercadoria', 'nome_produto'],
-        desconto: ['desconto', 'valor_desconto', 'vlr_desconto', 'discount', 'vl_desconto', 'total_desconto']
+        desconto: ['desconto', 'valor_desconto', 'vlr_desconto', 'discount', 'vl_desconto', 'total_desconto'],
+        quantidade: ['quantidade', 'qtd', 'qtde', 'quant', 'qtd_produto', 'quantidade_produto']
     };
 
     function normalizeHeader(header) {
@@ -85,8 +86,25 @@ const FileParser = (function() {
             }
             if (descIdx !== -1) mapping.desconto = descIdx;
         }
+        if (mapping.quantidade === undefined) {
+            var qtdIdx = -1;
+            for (var q = 0; q < normalized.length; q++) {
+                if (normalized[q].indexOf('qtd') !== -1 || normalized[q].indexOf('quant') !== -1) {
+                    qtdIdx = q;
+                    break;
+                }
+            }
+            if (qtdIdx !== -1) mapping.quantidade = qtdIdx;
+        }
 
         return mapping;
+    }
+
+    function parseQuantidade(qtd) {
+        if (qtd === null || qtd === undefined) return 0;
+        var str = qtd.toString().replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
+        var num = parseFloat(str);
+        return isNaN(num) ? 0 : num;
     }
 
     function parseValor(valor) {
@@ -188,6 +206,8 @@ const FileParser = (function() {
             // Skip rows with no valid data
             if (!parsedDate && parsedValor === 0 && !cols[mapping.loja]) continue;
 
+            var parsedQtd = mapping.quantidade !== undefined ? parseQuantidade(cols[mapping.quantidade]) : 0;
+
             data.push({
                 id: i,
                 data: parsedDate,
@@ -195,6 +215,8 @@ const FileParser = (function() {
                 loja: mapping.loja !== undefined ? (cols[mapping.loja] || '').toString().trim() : '',
                 fornecedor: mapping.fornecedor !== undefined ? (cols[mapping.fornecedor] || '').toString().trim() : '',
                 produto: mapping.produto !== undefined ? (cols[mapping.produto] || '').toString().trim() : '',
+                quantidade: parsedQtd,
+                quantidadeFormatada: parsedQtd.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
                 desconto: parsedValor,
                 descontoFormatado: parsedValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
                 raw: cols
@@ -252,6 +274,8 @@ const FileParser = (function() {
 
             if (!parsedDate && parsedValor === 0 && !row[mapping.loja]) continue;
 
+            var parsedQtdXlsx = mapping.quantidade !== undefined ? parseQuantidade(row[mapping.quantidade]) : 0;
+
             data.push({
                 id: i,
                 data: parsedDate,
@@ -259,6 +283,8 @@ const FileParser = (function() {
                 loja: mapping.loja !== undefined ? (row[mapping.loja] || '').toString().trim() : '',
                 fornecedor: mapping.fornecedor !== undefined ? (row[mapping.fornecedor] || '').toString().trim() : '',
                 produto: mapping.produto !== undefined ? (row[mapping.produto] || '').toString().trim() : '',
+                quantidade: parsedQtdXlsx,
+                quantidadeFormatada: parsedQtdXlsx.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
                 desconto: parsedValor,
                 descontoFormatado: parsedValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
                 raw: row

@@ -43,8 +43,8 @@ const ChartsModule = (function() {
                 datasets: [{
                     label: 'Valor em Descontos',
                     data: values,
-                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
-                    borderColor: 'rgba(139, 92, 246, 1)',
+                    backgroundColor: 'rgba(255, 107, 0, 0.7)',
+                    borderColor: 'rgba(255, 107, 0, 1)',
                     borderWidth: 1,
                     borderRadius: 6,
                     borderSkipped: false
@@ -115,14 +115,14 @@ const ChartsModule = (function() {
                 datasets: [{
                     data: values,
                     backgroundColor: [
-                        'rgba(139, 92, 246, 0.8)',
-                        'rgba(99, 102, 241, 0.8)',
-                        'rgba(52, 211, 153, 0.8)',
-                        'rgba(96, 165, 250, 0.8)',
-                        'rgba(251, 191, 36, 0.8)',
-                        'rgba(244, 114, 182, 0.8)',
-                        'rgba(167, 139, 250, 0.8)',
-                        'rgba(45, 212, 191, 0.8)'
+                        'rgba(255, 107, 0, 0.8)',
+                        'rgba(0, 59, 122, 0.8)',
+                        'rgba(255, 140, 0, 0.8)',
+                        'rgba(0, 100, 180, 0.8)',
+                        'rgba(255, 180, 0, 0.8)',
+                        'rgba(0, 80, 150, 0.8)',
+                        'rgba(255, 200, 50, 0.8)',
+                        'rgba(0, 120, 200, 0.8)'
                     ],
                     borderColor: '#1e1e2a',
                     borderWidth: 2

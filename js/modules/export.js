@@ -79,6 +79,7 @@ const ExportModule = (function() {
             { wch: 15 },  // Loja
             { wch: 40 },  // Fornecedor
             { wch: 35 },  // Produto
+            { wch: 12 },  // Quantidade
             { wch: 15 }   // Desconto
         ];
 
