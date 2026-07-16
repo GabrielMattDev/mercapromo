@@ -13,9 +13,9 @@
     --bg-hover: #2a2a3a;
     --bg-input: #16161f;
 
-    --accent-primary: #8b5cf6;
-    --accent-secondary: #a78bfa;
-    --accent-gradient: linear-gradient(135deg, #8b5cf6, #6366f1);
+    --accent-primary: #FF6B00;
+    --accent-secondary: #003B7A;
+    --accent-gradient: linear-gradient(135deg, #FF6B00, #003B7A);
 
     --text-primary: #f1f1f4;
     --text-secondary: #a0a0b0;
