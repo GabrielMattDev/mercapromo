@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         TableModule.init();
         ChartsModule.init();
         ExportModule.init();
+        MovimentacoesModule.init();
     }
 
     // Upload handlers

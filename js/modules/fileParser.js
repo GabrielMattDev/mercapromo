@@ -1,6 +1,6 @@
 /**
  * File Parser Module - MercaPromo
- * Handles TXT, CSV, and XLSX file parsing
+ * Handles TXT, CSV, and XLSX file parsing with detailed coupon data
  */
 const FileParser = (function() {
     'use strict';
@@ -8,14 +8,19 @@ const FileParser = (function() {
     var allData = [];
     var fileName = '';
 
-    // Expected column mappings (flexible)
+    // Expected column mappings (flexible) - supports both summary and detailed formats
     var COLUMN_MAP = {
-        data: ['data', 'dt', 'date', 'data_emissao', 'dt_emissao', 'emissao', 'data_desconto'],
+        data: ['data', 'dt', 'date', 'data_emissao', 'dt_emissao', 'emissao', 'data_desconto', 'data_movimentacao', 'dt_movimentacao'],
         loja: ['loja', 'cod_loja', 'codigo_loja', 'store', 'filial', 'unidade'],
         fornecedor: ['fornecedor', 'forn', 'supplier', 'nome_fornecedor', 'razao_social'],
         produto: ['produto', 'descricao', 'descricao_produto', 'item', 'mercadoria', 'nome_produto'],
+        quantidade: ['quantidade', 'qtd', 'qtde', 'quant', 'qtd_produto', 'quantidade_produto'],
         desconto: ['desconto', 'valor_desconto', 'vlr_desconto', 'discount', 'vl_desconto', 'total_desconto'],
-        quantidade: ['quantidade', 'qtd', 'qtde', 'quant', 'qtd_produto', 'quantidade_produto']
+        // Detailed columns
+        documento: ['documento', 'numero_documento', 'n_documento', 'doc', 'num_doc', 'cupom', 'numero_cupom', 'nota', 'numero_nota'],
+        pdv: ['pdv', 'ponto_venda', 'caixa', 'numero_pdv', 'cod_pdv'],
+        valor_venda: ['valor_venda', 'vlr_venda', 'valor_produto', 'preco_venda', 'preco', 'vl_venda', 'valor_unitario'],
+        valor_final: ['valor_final', 'vlr_final', 'total', 'valor_total', 'vl_final', 'preco_final']
     };
 
     function normalizeHeader(header) {
@@ -33,7 +38,7 @@ const FileParser = (function() {
     function detectColumns(headers) {
         var normalized = headers.map(normalizeHeader);
         var mapping = {};
-        var key, possibleNames, name, idx, lojaIdx, fornIdx, descIdx;
+        var key, possibleNames, name, idx;
 
         for (key in COLUMN_MAP) {
             if (COLUMN_MAP.hasOwnProperty(key)) {
@@ -55,56 +60,49 @@ const FileParser = (function() {
             }
         }
 
-        // Fallback: try partial matching
+        // Fallbacks
         if (mapping.loja === undefined) {
-            lojaIdx = -1;
             for (var k = 0; k < normalized.length; k++) {
-                if (normalized[k].indexOf('loj') !== -1) {
-                    lojaIdx = k;
-                    break;
-                }
+                if (normalized[k].indexOf('loj') !== -1) { mapping.loja = k; break; }
             }
-            if (lojaIdx !== -1) mapping.loja = lojaIdx;
         }
         if (mapping.fornecedor === undefined) {
-            fornIdx = -1;
             for (var m = 0; m < normalized.length; m++) {
-                if (normalized[m].indexOf('forn') !== -1 || normalized[m].indexOf('fornec') !== -1) {
-                    fornIdx = m;
-                    break;
-                }
+                if (normalized[m].indexOf('forn') !== -1 || normalized[m].indexOf('fornec') !== -1) { mapping.fornecedor = m; break; }
             }
-            if (fornIdx !== -1) mapping.fornecedor = fornIdx;
         }
         if (mapping.desconto === undefined) {
-            descIdx = -1;
             for (var n = 0; n < normalized.length; n++) {
-                if (normalized[n].indexOf('desc') !== -1 || normalized[n].indexOf('descont') !== -1) {
-                    descIdx = n;
-                    break;
-                }
+                if (normalized[n].indexOf('desc') !== -1 || normalized[n].indexOf('descont') !== -1) { mapping.desconto = n; break; }
             }
-            if (descIdx !== -1) mapping.desconto = descIdx;
         }
         if (mapping.quantidade === undefined) {
-            var qtdIdx = -1;
             for (var q = 0; q < normalized.length; q++) {
-                if (normalized[q].indexOf('qtd') !== -1 || normalized[q].indexOf('quant') !== -1) {
-                    qtdIdx = q;
-                    break;
-                }
+                if (normalized[q].indexOf('qtd') !== -1 || normalized[q].indexOf('quant') !== -1) { mapping.quantidade = q; break; }
             }
-            if (qtdIdx !== -1) mapping.quantidade = qtdIdx;
+        }
+        if (mapping.documento === undefined) {
+            for (var d = 0; d < normalized.length; d++) {
+                if (normalized[d].indexOf('doc') !== -1 || normalized[d].indexOf('cupom') !== -1 || normalized[d].indexOf('nota') !== -1) { mapping.documento = d; break; }
+            }
+        }
+        if (mapping.pdv === undefined) {
+            for (var p = 0; p < normalized.length; p++) {
+                if (normalized[p].indexOf('pdv') !== -1 || normalized[p].indexOf('caixa') !== -1) { mapping.pdv = p; break; }
+            }
+        }
+        if (mapping.valor_venda === undefined) {
+            for (var v = 0; v < normalized.length; v++) {
+                if (normalized[v].indexOf('venda') !== -1 || normalized[v].indexOf('preco') !== -1) { mapping.valor_venda = v; break; }
+            }
+        }
+        if (mapping.valor_final === undefined) {
+            for (var f = 0; f < normalized.length; f++) {
+                if (normalized[f].indexOf('final') !== -1 || normalized[f].indexOf('total') !== -1) { mapping.valor_final = f; break; }
+            }
         }
 
         return mapping;
-    }
-
-    function parseQuantidade(qtd) {
-        if (qtd === null || qtd === undefined) return 0;
-        var str = qtd.toString().replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
-        var num = parseFloat(str);
-        return isNaN(num) ? 0 : num;
     }
 
     function parseValor(valor) {
@@ -117,37 +115,33 @@ const FileParser = (function() {
         return isNaN(num) ? 0 : num;
     }
 
+    function parseQuantidade(qtd) {
+        if (qtd === null || qtd === undefined) return 0;
+        var str = qtd.toString().replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
+        var num = parseFloat(str);
+        return isNaN(num) ? 0 : num;
+    }
+
     function parseData(dataStr) {
         if (!dataStr) return null;
         var str = dataStr.toString().trim();
         var match;
 
-        // Try DD/MM/YYYY
         match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-        if (match) {
-            return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-        }
+        if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
 
-        // Try YYYY-MM-DD
         match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-        if (match) {
-            return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-        }
+        if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
 
-        // Try DD-MM-YYYY
         match = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-        if (match) {
-            return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-        }
+        if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
 
-        // Try Excel serial
         var excelSerial = parseInt(str);
         if (!isNaN(excelSerial) && excelSerial > 30000 && excelSerial < 50000) {
             var excelEpoch = new Date(1899, 11, 30);
             return new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
         }
 
-        // Fallback to native parse
         var d = new Date(str);
         return isNaN(d.getTime()) ? null : d;
     }
@@ -157,17 +151,20 @@ const FileParser = (function() {
         return date.toLocaleDateString('pt-BR');
     }
 
+    function formatDateTimeBR(date) {
+        if (!date || isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+
     function parseCSV(text) {
         var lines = text.split(/\r?\n/).filter(function(line) { return line.trim(); });
         if (lines.length < 2) return [];
 
-        // Detect delimiter
         var firstLine = lines[0];
         var semicolonCount = (firstLine.match(/;/g) || []).length;
         var commaCount = (firstLine.match(/,/g) || []).length;
         var delimiter = semicolonCount >= commaCount ? ';' : ',';
 
-        // Parse with respect to quotes
         function splitLine(line) {
             var result = [];
             var current = '';
@@ -192,7 +189,7 @@ const FileParser = (function() {
         var mapping = detectColumns(headers);
 
         if (Object.keys(mapping).length === 0) {
-            throw new Error('Nao foi possivel identificar as colunas do arquivo. Verifique se o arquivo contem as colunas: Data, Loja, Fornecedor, Produto, Desconto');
+            throw new Error('Nao foi possivel identificar as colunas do arquivo.');
         }
 
         var data = [];
@@ -202,16 +199,17 @@ const FileParser = (function() {
 
             var parsedDate = mapping.data !== undefined ? parseData(cols[mapping.data]) : null;
             var parsedValor = mapping.desconto !== undefined ? parseValor(cols[mapping.desconto]) : 0;
-
-            // Skip rows with no valid data
-            if (!parsedDate && parsedValor === 0 && !cols[mapping.loja]) continue;
-
             var parsedQtd = mapping.quantidade !== undefined ? parseQuantidade(cols[mapping.quantidade]) : 0;
+            var parsedVenda = mapping.valor_venda !== undefined ? parseValor(cols[mapping.valor_venda]) : 0;
+            var parsedFinal = mapping.valor_final !== undefined ? parseValor(cols[mapping.valor_final]) : 0;
+
+            if (!parsedDate && parsedValor === 0 && !cols[mapping.loja]) continue;
 
             data.push({
                 id: i,
                 data: parsedDate,
                 dataFormatada: formatDateBR(parsedDate),
+                dataHoraFormatada: formatDateTimeBR(parsedDate),
                 loja: mapping.loja !== undefined ? (cols[mapping.loja] || '').toString().trim() : '',
                 fornecedor: mapping.fornecedor !== undefined ? (cols[mapping.fornecedor] || '').toString().trim() : '',
                 produto: mapping.produto !== undefined ? (cols[mapping.produto] || '').toString().trim() : '',
@@ -219,6 +217,13 @@ const FileParser = (function() {
                 quantidadeFormatada: parsedQtd.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
                 desconto: parsedValor,
                 descontoFormatado: parsedValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                // Detailed fields
+                documento: mapping.documento !== undefined ? (cols[mapping.documento] || '').toString().trim() : '',
+                pdv: mapping.pdv !== undefined ? (cols[mapping.pdv] || '').toString().trim() : '',
+                valorVenda: parsedVenda,
+                valorVendaFormatado: parsedVenda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                valorFinal: parsedFinal,
+                valorFinalFormatado: parsedFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
                 raw: cols
             });
         }
@@ -227,11 +232,9 @@ const FileParser = (function() {
     }
 
     function parseTXT(text) {
-        // Try to detect if it's tab-separated or fixed-width
         var lines = text.split(/\r?\n/).filter(function(line) { return line.trim(); });
         if (lines.length < 2) return [];
 
-        // Check if first line looks like headers
         var firstLine = lines[0].toLowerCase();
         var hasHeaders = firstLine.indexOf('data') !== -1 || firstLine.indexOf('loja') !== -1 || 
                           firstLine.indexOf('fornecedor') !== -1 || firstLine.indexOf('desconto') !== -1;
@@ -240,13 +243,11 @@ const FileParser = (function() {
             return parseCSV(text.replace(/\t/g, ';'));
         }
 
-        // Fixed-width fallback - try to split by multiple spaces or tabs
         var tabLines = text.split(/\r?\n/).map(function(l) { return l.split('\t'); });
         if (tabLines.length > 1 && tabLines[0].length > 3) {
             return parseCSV(text.replace(/\t/g, ';'));
         }
 
-        // Last resort: treat as CSV with space delimiter
         return parseCSV(text);
     }
 
@@ -261,7 +262,7 @@ const FileParser = (function() {
         var mapping = detectColumns(headers);
 
         if (Object.keys(mapping).length === 0) {
-            throw new Error('Nao foi possivel identificar as colunas do arquivo Excel. Verifique se o arquivo contem as colunas: Data, Loja, Fornecedor, Produto, Desconto');
+            throw new Error('Nao foi possivel identificar as colunas do arquivo Excel.');
         }
 
         var data = [];
@@ -271,22 +272,30 @@ const FileParser = (function() {
 
             var parsedDate = mapping.data !== undefined ? parseData(row[mapping.data]) : null;
             var parsedValor = mapping.desconto !== undefined ? parseValor(row[mapping.desconto]) : 0;
+            var parsedQtd = mapping.quantidade !== undefined ? parseQuantidade(row[mapping.quantidade]) : 0;
+            var parsedVenda = mapping.valor_venda !== undefined ? parseValor(row[mapping.valor_venda]) : 0;
+            var parsedFinal = mapping.valor_final !== undefined ? parseValor(row[mapping.valor_final]) : 0;
 
             if (!parsedDate && parsedValor === 0 && !row[mapping.loja]) continue;
-
-            var parsedQtdXlsx = mapping.quantidade !== undefined ? parseQuantidade(row[mapping.quantidade]) : 0;
 
             data.push({
                 id: i,
                 data: parsedDate,
                 dataFormatada: formatDateBR(parsedDate),
+                dataHoraFormatada: formatDateTimeBR(parsedDate),
                 loja: mapping.loja !== undefined ? (row[mapping.loja] || '').toString().trim() : '',
                 fornecedor: mapping.fornecedor !== undefined ? (row[mapping.fornecedor] || '').toString().trim() : '',
                 produto: mapping.produto !== undefined ? (row[mapping.produto] || '').toString().trim() : '',
-                quantidade: parsedQtdXlsx,
-                quantidadeFormatada: parsedQtdXlsx.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
+                quantidade: parsedQtd,
+                quantidadeFormatada: parsedQtd.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
                 desconto: parsedValor,
                 descontoFormatado: parsedValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                documento: mapping.documento !== undefined ? (row[mapping.documento] || '').toString().trim() : '',
+                pdv: mapping.pdv !== undefined ? (row[mapping.pdv] || '').toString().trim() : '',
+                valorVenda: parsedVenda,
+                valorVendaFormatado: parsedVenda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                valorFinal: parsedFinal,
+                valorFinalFormatado: parsedFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
                 raw: row
             });
         }
@@ -322,26 +331,13 @@ const FileParser = (function() {
             };
 
             reader.onerror = function() { reject(new Error('Erro ao ler o arquivo')); };
-
-            if (ext === 'xlsx' || ext === 'xls') {
-                reader.readAsArrayBuffer(file);
-            } else {
-                reader.readAsArrayBuffer(file);
-            }
+            reader.readAsArrayBuffer(file);
         });
     }
 
-    function getAllData() {
-        return allData;
-    }
-
-    function getFileName() {
-        return fileName;
-    }
-
-    function setData(data) {
-        allData = data;
-    }
+    function getAllData() { return allData; }
+    function getFileName() { return fileName; }
+    function setData(data) { allData = data; }
 
     return {
         parseFile: parseFile,
@@ -349,6 +345,7 @@ const FileParser = (function() {
         getFileName: getFileName,
         setData: setData,
         parseValor: parseValor,
-        formatDateBR: formatDateBR
+        formatDateBR: formatDateBR,
+        formatDateTimeBR: formatDateTimeBR
     };
 })();

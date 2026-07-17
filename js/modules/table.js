@@ -5,10 +5,10 @@
 const TableModule = (function() {
     'use strict';
 
-    let currentData = [];
-    let currentPage = 1;
-    let itemsPerPage = 25;
-    let searchTerm = '';
+    var currentData = [];
+    var currentPage = 1;
+    var itemsPerPage = 25;
+    var searchTerm = '';
 
     function init() {
         setupEventListeners();
@@ -30,7 +30,7 @@ const TableModule = (function() {
     }
 
     function debounce(func, wait) {
-        let timeout;
+        var timeout;
         return function executedFunction() {
             var args = arguments;
             var later = function() {
@@ -102,14 +102,16 @@ const TableModule = (function() {
         var html = '';
         for (var i = 0; i < data.length; i++) {
             var item = data[i];
+            var fornEsc = escapeHtml(item.fornecedor || '');
+            var lojaEsc = escapeHtml(item.loja || '');
             html += '<tr>' +
                 '<td class="col-data">' + (item.dataFormatada || '-') + '</td>' +
                 '<td><span class="loja-badge"><i class="fas fa-store"></i>' + (item.loja || '-') + '</span></td>' +
-                '<td class="col-fornecedor" title="' + escapeHtml(item.fornecedor || '') + '">' + (item.fornecedor || '-') + '</td>' +
+                '<td class="col-fornecedor" title="' + fornEsc + '">' + (item.fornecedor || '-') + '</td>' +
                 '<td class="col-produto" title="' + escapeHtml(item.produto || '') + '">' + (item.produto || '-') + '</td>' +
                 '<td class="col-quantidade">' + (item.quantidadeFormatada || '0') + '</td>' +
                 '<td class="col-valor">' + (item.descontoFormatado || 'R$ 0,00') + '</td>' +
-                '<td><button class="btn-view" onclick="TableModule.showDetail(' + item.id + ')"><i class="fas fa-eye"></i> Ver</button></td>' +
+                '<td><button class="btn-view" onclick="MovimentacoesModule.openMovimentacoes(\'' + fornEsc + '\', \'' + lojaEsc + '\')"><i class="fas fa-eye"></i> Ver</button></td>' +
             '</tr>';
         }
         tbody.innerHTML = html;
@@ -174,7 +176,6 @@ const TableModule = (function() {
         document.getElementById('modalOverlay').style.display = 'none';
     }
 
-    // Expose showDetail globally for onclick
     window.TableModule = {
         showDetail: showDetail,
         closeModal: closeModal,
